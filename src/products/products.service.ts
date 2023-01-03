@@ -6,10 +6,13 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { PaginationDto } from 'src/common/dtos/pagination.dto';
 import { Repository } from 'typeorm';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { Product } from './entities/product.entity';
+
+import { validate as isUUID } from 'uuid';
 
 @Injectable()
 export class ProductsService {
@@ -29,12 +32,21 @@ export class ProductsService {
     }
   }
 
-  async findAll() {
-    return await this.productsRepository.find();
+  async findAll(paginationDto: PaginationDto) {
+    const { limit = 10, page = 0 } = paginationDto;
+
+    return await this.productsRepository.find({
+      take: limit,
+      skip: page * limit,
+      // TODO: Add relations
+    });
   }
 
   async findOne(id: string) {
-    const product = await this.productsRepository.findOneBy({ id });
+    let product: Product;
+
+    if (isUUID(id)) product = await this.productsRepository.findOneBy({ id });
+    else product = await this.productsRepository.findOneBy({ slug: id });
 
     if (!product) throw new NotFoundException('Product not found');
 
